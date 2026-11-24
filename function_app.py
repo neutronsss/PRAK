@@ -1,25 +1,30 @@
+import json
+
 import azure.functions as func
-import logging
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
-@app.route(route="trigger_kel4tcba_2")
-def trigger_kel4tcba_2(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
 
-    name = req.params.get('name')
-    if not name:
-        try:
-            req_body = req.get_json()
-        except ValueError:
-            pass
-        else:
-            name = req_body.get('name')
+def kategori_pm25(nilai: float) -> str:
+    if nilai < 0:
+        raise ValueError("PM2.5 tidak boleh negatif")
+    if nilai <= 15.5:
+        return "baik"
+    if nilai <= 55.4:
+        return "sedang"
+    if nilai <= 150.4:
+        return "tidak sehat"
+    return "sangat tidak sehat"
 
-    if name:
-        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
-    else:
-        return func.HttpResponse(
-             "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
-             status_code=200
-        )
+
+@app.route(route="trigger_kel4tcba_2", methods=["GET"])
+def kategori(req: func.HttpRequest) -> func.HttpResponse:
+    nilai = req.params.get("pm25")
+    if nilai is None:
+        return func.HttpResponse("Parameter pm25 wajib, contoh: ?pm25=60", status_code=400)
+    try:
+        hasil = kategori_pm25(float(nilai))
+    except ValueError as e:
+        return func.HttpResponse(str(e), status_code=400)
+    body = json.dumps({"pm25": float(nilai), "kategori": hasil})
+    return func.HttpResponse(body, mimetype="application/json")
